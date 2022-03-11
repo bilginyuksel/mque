@@ -2,26 +2,32 @@ package main
 
 import (
 	"log"
-	"net"
+	"os"
+	"os/signal"
+	"time"
+
+	"github.com/bilginyuksel/mque/internal/conn"
 )
 
 func main() {
-	listener, err := net.Listen("tcp", ":8080")
-	if err != nil {
+	s := conn.Server{
+		OnConnection: func(c conn.Conn) {
+			log.Printf("accepted new connection with id: %v\n\n", c)
+		},
+		ConnectionWriteDeadline: 2 * time.Second,
+		ConnectionReadDeadline:  2 * time.Second,
+	}
+	if err := s.Start(":8080"); err != nil {
 		panic(err)
 	}
 	log.Println("started listening on port 8080")
 
-	conn, err := listener.Accept()
-	if err != nil {
-		panic(err)
-	}
-	log.Println("accepted connection")
+	go s.Listen()
+	defer s.Close()
 
-	intValue, err := conn.Write([]byte("hello"))
-	if err != nil {
-		panic(err)
-	}
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt)
 
-	log.Println("int value:", intValue)
+	<-quit
+	log.Println("shutting down")
 }
