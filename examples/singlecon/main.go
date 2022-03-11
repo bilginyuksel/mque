@@ -42,7 +42,7 @@ func main() {
 			msgByteLength, err := con.Read(chunk)
 			if err != nil {
 				log.Printf("msg read failed, err: %v\n", err)
-				continue
+				break
 			}
 
 			msg := make([]byte, msgByteLength)
