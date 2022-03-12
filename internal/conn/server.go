@@ -16,9 +16,9 @@ var (
 
 type Server struct {
 	listener    net.Listener
-	connections map[string]Conn
+	Connections map[string]*Conn
 
-	OnConnection            func(c Conn)
+	OnConnection            func(c *Conn)
 	ConnectionWriteDeadline time.Duration
 	ConnectionReadDeadline  time.Duration
 }
@@ -47,15 +47,15 @@ func (s *Server) Listen() {
 }
 
 func (s *Server) acceptConnection(stdconn net.Conn) {
-	writeDeadline := time.Now().Add(s.ConnectionWriteDeadline)
-	if err := stdconn.SetWriteDeadline(writeDeadline); err != nil {
-		log.Println("write deadline exceeded")
-	}
+	// writeDeadline := time.Now().Add(s.ConnectionWriteDeadline)
+	// if err := stdconn.SetWriteDeadline(writeDeadline); err != nil {
+	// 	log.Println("write deadline exceeded")
+	// }
 
-	readDeadline := time.Now().Add(s.ConnectionReadDeadline)
-	if err := stdconn.SetReadDeadline(readDeadline); err != nil {
-		log.Println("read deadline exceeded")
-	}
+	// readDeadline := time.Now().Add(s.ConnectionReadDeadline)
+	// if err := stdconn.SetReadDeadline(readDeadline); err != nil {
+	// 	log.Println("read deadline exceeded")
+	// }
 
 	if _, err := stdconn.Write(healthyHelloMsg); err != nil {
 		log.Printf("write failed, err: %v\n", err)
@@ -84,9 +84,9 @@ func (s *Server) acceptConnection(stdconn net.Conn) {
 		log.Printf("new connection failed, err: %v\n", err)
 		return
 	}
-	s.connections[conn.ID] = *conn
+	s.Connections[conn.ID] = conn
 
-	s.OnConnection(*conn)
+	s.OnConnection(conn)
 }
 
 func (s *Server) Close() error {

@@ -13,6 +13,11 @@ var (
 	ErrByteLengthTooSmall = errors.New("byte length too small")
 )
 
+const (
+	Publisher = iota + 1
+	Subscriber
+)
+
 type Reader interface {
 	Read() ([]byte, error)
 }
@@ -29,6 +34,7 @@ type (
 		MaxByteSize  int64  `json:"max_byte_size"`
 		MinByteSize  int64  `json:"min_byte_size"`
 		Acks         uint8  `json:"acks"`
+		Type         uint8  `json:"type"`
 
 		// Encryption
 	}
@@ -54,15 +60,15 @@ func New(conn net.Conn, conf Config) (*Conn, error) {
 		chunk: make([]byte, conf.MaxByteSize),
 	}
 
-	readDeadline := time.Now().Add(time.Duration(connection.Conf.ReadTimeout))
-	writeDeadline := time.Now().Add(time.Duration(connection.Conf.WriteTimeout))
+	// readDeadline := time.Now().Add(time.Duration(connection.Conf.ReadTimeout))
+	// writeDeadline := time.Now().Add(time.Duration(connection.Conf.WriteTimeout))
 
-	if err := connection.conn.SetReadDeadline(readDeadline); err != nil {
-		return nil, err
-	}
+	// if err := connection.conn.SetReadDeadline(readDeadline); err != nil {
+	// 	return nil, err
+	// }
 
-	err := connection.conn.SetWriteDeadline(writeDeadline)
-	return connection, err
+	// err := connection.conn.SetWriteDeadline(writeDeadline)
+	return connection, nil
 }
 
 func (c *Conn) Read() ([]byte, error) {
