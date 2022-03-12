@@ -2,10 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net"
-	"os"
-	"os/signal"
 )
 
 func main() {
@@ -27,34 +26,27 @@ func main() {
 		WriteTimeout: 2000,
 		MaxByteSize:  33223232,
 		MinByteSize:  1,
-		Type:         Subscriber,
+		Type:         Publisher,
 	}
 	confBytes, _ := json.Marshal(conf)
 	if _, err := con.Write(confBytes); err != nil {
 		panic(err)
 	}
 
-	go func() {
-		chunk := make([]byte, 2048)
-		for {
-			msgByteLength, err := con.Read(chunk)
-			if err != nil {
-				log.Printf("msg read failed, err: %v\n", err)
-				break
-			}
+	for {
+		var msgContent string
+		fmt.Scanln(&msgContent)
 
-			msg := make([]byte, msgByteLength)
-			copy(msg, chunk)
-
-			log.Println("received message from server:", string(msg))
+		if msgContent == "q" {
+			break
 		}
-	}()
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt)
-	<-quit
+		log.Println("sending message:", msgContent)
 
-	log.Println("shutting down")
+		if _, err := con.Write([]byte(msgContent)); err != nil {
+			log.Println("write failed, err:", err)
+		}
+	}
 
 	if err := con.Close(); err != nil {
 		panic(err)
