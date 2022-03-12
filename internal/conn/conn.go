@@ -1,7 +1,7 @@
 package conn
 
 import (
-	"encoding/json"
+	"errors"
 	"log"
 	"net"
 	"time"
@@ -9,92 +9,16 @@ import (
 	"github.com/google/uuid"
 )
 
-const _network = "tcp"
-
 var (
-	healthyHelloMsg = []byte(`{"healthy": true}`)
-	chunk           = make([]byte, 1024)
+	ErrByteLengthTooSmall = errors.New("byte length too small")
 )
 
-type Server struct {
-	listener    net.Listener
-	connections []Conn
-
-	OnConnection            func(c Conn)
-	ConnectionWriteDeadline time.Duration
-	ConnectionReadDeadline  time.Duration
+type Reader interface {
+	Read() ([]byte, error)
 }
 
-// Start a server on the given address.
-func (s *Server) Start(addr string) error {
-	listener, err := net.Listen(_network, addr)
-	if err != nil {
-		return err
-	}
-
-	s.listener = listener
-	return nil
-}
-
-// Listen for incoming connections.
-func (s *Server) Listen() {
-	for {
-		stdconn, err := s.listener.Accept()
-		if err != nil {
-			log.Printf("connection dropped, err: %v\n", err)
-		}
-
-		go s.acceptConnection(stdconn)
-	}
-}
-
-func (s *Server) acceptConnection(stdconn net.Conn) {
-	writeDeadline := time.Now().Add(s.ConnectionWriteDeadline)
-	if err := stdconn.SetWriteDeadline(writeDeadline); err != nil {
-		log.Println("write deadline exceeded")
-	}
-
-	readDeadline := time.Now().Add(s.ConnectionReadDeadline)
-	if err := stdconn.SetReadDeadline(readDeadline); err != nil {
-		log.Println("read deadline exceeded")
-	}
-
-	if _, err := stdconn.Write(healthyHelloMsg); err != nil {
-		log.Printf("write failed, err: %v\n", err)
-	}
-	log.Println("health message sent")
-
-	byteLength, err := stdconn.Read(chunk)
-	if err != nil {
-		log.Printf("read failed, msg: %s, err: %v\n", string(chunk), err)
-	}
-
-	msg := make([]byte, byteLength)
-	copy(msg, chunk)
-
-	var conf Config
-	if err := json.Unmarshal(msg, &conf); err != nil {
-		log.Printf("unmarshal failed, msg: %s, err: %v\n", string(msg), err)
-		if _, err := stdconn.Write([]byte(`{"error": "incorrect config message format"}`)); err != nil {
-			log.Printf("write failed, err: %v\n", err)
-			return
-		}
-	}
-
-	conn := Conn{
-		ID:   uuid.NewString(),
-		conn: stdconn,
-		At:   time.Now(),
-		Conf: conf,
-	}
-	s.connections = append(s.connections, conn)
-
-	s.OnConnection(conn)
-
-}
-
-func (s *Server) Close() error {
-	return s.listener.Close()
+type Writer interface {
+	Write([]byte) error
 }
 
 type (
@@ -104,6 +28,7 @@ type (
 		WriteTimeout int64  `json:"write_timeout"`
 		MaxByteSize  int64  `json:"max_byte_size"`
 		MinByteSize  int64  `json:"min_byte_size"`
+		Acks         uint8  `json:"acks"`
 
 		// Encryption
 	}
@@ -114,8 +39,58 @@ type (
 		ID   string
 		At   time.Time
 		Conf Config
+
+		// chunk use for communication
+		chunk []byte
 	}
 )
+
+func New(conn net.Conn, conf Config) (*Conn, error) {
+	connection := &Conn{
+		conn:  conn,
+		ID:    uuid.NewString(),
+		At:    time.Now(),
+		Conf:  conf,
+		chunk: make([]byte, conf.MaxByteSize),
+	}
+
+	readDeadline := time.Now().Add(time.Duration(connection.Conf.ReadTimeout))
+	writeDeadline := time.Now().Add(time.Duration(connection.Conf.WriteTimeout))
+
+	if err := connection.conn.SetReadDeadline(readDeadline); err != nil {
+		return nil, err
+	}
+
+	err := connection.conn.SetWriteDeadline(writeDeadline)
+	return connection, err
+}
+
+func (c *Conn) Read() ([]byte, error) {
+	byteLength, err := c.conn.Read(c.chunk)
+	if err != nil {
+		log.Println("read failed, err:", err)
+		return nil, err
+	}
+
+	if int64(byteLength) < c.Conf.MinByteSize {
+		return nil, ErrByteLengthTooSmall
+	}
+
+	msg := make([]byte, byteLength)
+	copy(msg, c.chunk)
+	return msg, nil
+}
+
+func (c *Conn) Write(msg []byte) error {
+	byteLength, err := c.conn.Write(msg)
+	if err != nil {
+		log.Println("write failed, err:", err)
+		return err
+	}
+
+	log.Println("write success, byteLength:", byteLength)
+	return nil
+}
 
 func (c *Conn) Close() error {
 	return c.conn.Close()
