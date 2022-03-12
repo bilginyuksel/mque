@@ -16,7 +16,10 @@ func (cq *Consistent) Push(msg []byte) error {
 		return err
 	}
 
-	cq.release <- struct{}{}
+	select {
+	case cq.release <- struct{}{}:
+	default:
+	}
 	return nil
 }
 

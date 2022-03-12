@@ -9,7 +9,10 @@ type Basic struct {
 func (q *Basic) Push(msg []byte) error {
 	q.Messages = append(q.Messages, msg)
 
-	q.release <- struct{}{}
+	select {
+	case q.release <- struct{}{}:
+	default:
+	}
 	return nil
 }
 
