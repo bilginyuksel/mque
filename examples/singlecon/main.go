@@ -46,7 +46,7 @@ func main() {
 			msg := make([]byte, msgByteLength)
 			copy(msg, chunk)
 
-			log.Println("received message from server:", string(msg))
+			log.Printf("length: %d, msg: %s\n", msgByteLength, string(msg))
 		}
 	}()
 
