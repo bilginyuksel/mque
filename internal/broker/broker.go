@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"github.com/bilginyuksel/mque/internal/conn"
-	"github.com/bilginyuksel/mque/internal/topic"
+	"github.com/bilginyuksel/mque/internal/topic/v2"
 )
 
 type Broker struct {
@@ -17,23 +17,23 @@ func New() *Broker {
 	}
 }
 
-func (b *Broker) getOrCreate(topicName string) topic.Topic {
+func (b *Broker) createIfNotExists(topicName string) topic.Topic {
 	if t, ok := b.topics[topicName]; ok {
 		return t
 	}
 
-	t := topic.New(topic.NoAck)
+	t := topic.New()
 	b.topics[topicName] = t
 	return t
 }
 
 func (b *Broker) Subscribe(topicName string, connection *conn.Conn) {
-	t := b.getOrCreate(topicName)
-	readerWriter := NewReaderWriter(connection, t)
+	t := b.createIfNotExists(topicName)
+	reader := NewReader(connection, t.CreateReader())
 
 	go func() {
 		for {
-			if err := readerWriter.ReadMessage(); err != nil {
+			if err := reader.ReadMessage(); err != nil {
 				log.Println("error while reading message:", err)
 				break
 			}
@@ -42,12 +42,12 @@ func (b *Broker) Subscribe(topicName string, connection *conn.Conn) {
 }
 
 func (b *Broker) Publish(topicName string, connection *conn.Conn) {
-	t := b.getOrCreate(topicName)
-	readerWriter := NewReaderWriter(connection, t)
+	t := b.createIfNotExists(topicName)
+	writer := NewWriter(connection, t.CreateWriter())
 
 	go func() {
 		for {
-			if err := readerWriter.WriteMessage(); err != nil {
+			if err := writer.WriteMessage(); err != nil {
 				log.Println("error while writing message:", err)
 				break
 			}
