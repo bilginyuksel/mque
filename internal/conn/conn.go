@@ -88,13 +88,12 @@ func (c *Conn) Read() ([]byte, error) {
 }
 
 func (c *Conn) Write(msg []byte) error {
-	byteLength, err := c.conn.Write(msg)
+	_, err := c.conn.Write(msg)
 	if err != nil {
 		log.Println("write failed, err:", err)
 		return err
 	}
 
-	log.Println("write success, byteLength:", byteLength)
 	return nil
 }
 

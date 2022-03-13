@@ -10,7 +10,7 @@ import (
 const _network = "tcp"
 
 var (
-	healthyHelloMsg = []byte(`{"healthy": true}`)
+	healthyHelloMsg = []byte(`{"status": "healthy"}`)
 	chunk           = make([]byte, 1024)
 )
 

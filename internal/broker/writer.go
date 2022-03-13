@@ -24,7 +24,7 @@ func (w *Writer) WriteMessage() error {
 	if err != nil {
 		return err
 	}
-	log.Println("msg:", msg)
+	log.Println("msg:", string(msg))
 
 	w.topicWriter.Write(msg)
 	return nil
