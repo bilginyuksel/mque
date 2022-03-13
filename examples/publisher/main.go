@@ -1,10 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net"
+	"os"
 )
 
 func main() {
@@ -33,9 +34,13 @@ func main() {
 		panic(err)
 	}
 
+	scanner := bufio.NewScanner(os.Stdin)
+
 	for {
 		var msgContent string
-		fmt.Scanln(&msgContent)
+		if scanner.Scan() {
+			msgContent = scanner.Text()
+		}
 
 		if msgContent == "q" {
 			break
