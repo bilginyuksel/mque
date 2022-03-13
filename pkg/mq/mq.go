@@ -109,7 +109,7 @@ func NewWriter(conf WriterConfig) (*Writer, error) {
 
 // Write TODO: This method needs to be updated now it is not useful
 func (w *Writer) Write() {
-	scanner := bufio.NewScanner(os.Stderr)
+	scanner := bufio.NewScanner(os.Stdin)
 
 	for {
 		var msgContent string
@@ -120,8 +120,6 @@ func (w *Writer) Write() {
 		if msgContent == "q" {
 			break
 		}
-
-		log.Println("sending message:", msgContent)
 
 		if _, err := w.conn.Write([]byte(msgContent)); err != nil {
 			log.Println("write failed, err:", err)
@@ -152,6 +150,7 @@ func handshake(conn net.Conn, conf ConnectionConfig) error {
 	if _, err := conn.Read(chunk); err != nil {
 		return err
 	}
+	log.Println(string(chunk))
 
 	// write configuration message
 	confBytes, _ := json.Marshal(conf)
