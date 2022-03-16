@@ -22,7 +22,12 @@ func (b *Broker) createIfNotExists(topicName string) topic.Topic {
 		return t
 	}
 
-	t := topic.New()
+	t, err := topic.New(topicName)
+	if err != nil {
+		log.Println("error while creating topic:", err)
+		return nil
+	}
+
 	b.topics[topicName] = t
 	return t
 }

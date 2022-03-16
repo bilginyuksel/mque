@@ -1,0 +1,26 @@
+Re-structrue file formats like 
+<length-bytes-of-message>_<message>
+<length-bytes-of-message>_<message>
+
+Reader will store its current buffer size
+currentBuffer int64
+
+// Before read at we will read the length of the file according to the currentBuffer
+// Let's say we have fixed 15 digits for number starts with zeros if so small
+lengthOfBytes := make([]byte, 15)
+if err := f.ReadAt(lengthOfBytes, currentBuffer); err != nil {
+    // do something
+}
+byteLength := int64(lengthOfBytes)
+
+// now just read the original msg
+msg := make([]byte, byteLength)
+if err := f.ReadAt(msg, byteLength); err != nil {
+    // do something
+}
+
+return msg
+
+
+// Open multiple connections to the file to make the process a little bit faster
+// Otherwise it will be slow
